@@ -1,0 +1,111 @@
+# Copyright (C) Denis Berthod 2015
+# This file is distributed under the MIT licence
+
+USE_OCAMLFIND = true
+
+public.Features[] =
+
+private.filter(func, xs) =
+	acc[] =
+	xs.foreach(x) =>
+		if $(func $(x))
+			acc += $(x)
+			export
+		export
+	return $(acc)
+
+Pkg(pkg)=
+	.STATIC: :key: $(pkg)
+		private.COMMAND = $(OCAMLFIND) query $(pkg)
+		ENABLED = $(shell-success-null $(COMMAND))
+		export PKGPATH
+		if $(ENABLED)
+			PKGPATH = $(shell $(OCAMLFIND) query $(pkg))
+		else
+			PKGPATH =
+		export ENABLED PKGPATH
+
+	OBJ. =
+		PKGNAME = $(pkg)
+		ENABLED = $(ENABLED)
+		PKGPATH = $(PKGPATH)
+		export
+
+	return $(OBJ)
+
+private.print_fixed_size(s, size) =
+	l = $(s.length)
+	diff = $(sub $(size), $(l))
+	print($(s))
+	while $(le 0, $(diff))
+		diff = $(sub $(diff), 1)
+		print($".")
+
+private.print_result(prefix, suffix) =
+	print_fixed_size($(prefix), 40)
+	println($(suffix))
+
+private.PrintPkg(pkg)=
+	Pack = $(Pkg $(pkg))
+	if $(Pack.ENABLED)
+		print_result($"### Package $(pkg) ", $" [FOUND]")
+		println($"    $(Pack.PKGPATH)")
+		println($" ")
+	else
+		print_result($"### Package $(pkg) ", $" [NOT FOUND]")
+		println($" ")
+
+private.Feature_(name, pkgs) =
+	OBJ. =
+		NAME = $(name)
+		ENABLED = $(pkgs.forall $(fun pkg => $(pkg.ENABLED)))
+		MISSING_PKGS =
+			PKGS = $(filter $(fun pkg => $(not $(pkg.ENABLED))), $(pkgs))
+			PKGS.foreach(pkg) =>
+				value $(pkg.PKGNAME)
+		PKG_NAMES =
+			pkgs.foreach(pkg) =>
+				value $(pkg.PKGNAME)
+	return $(OBJ)
+
+Feature(name, pkg_names) =
+	pkg_names = $(split $" ", $(pkg_names))
+	pkgs =
+		pkg_names.foreach(pkg_name) =>
+			value $(Pkg $(pkg_name))
+	Feature = $(Feature_ $(name), $(pkgs))
+	Features +=
+		value $(Feature)
+	export Features
+	value $(Feature)
+
+private.PrintFeature(feature) =
+	if $(feature.ENABLED)
+		print_result($"### Feature $(feature.NAME) ", $" [ENABLED]")
+		println($" ")
+	else
+		print_result($"### Feature $(feature.NAME) ", $" [DISABLED]")
+		println($"    Missing packages: $(feature.MISSING_PKGS)")
+		println($" ")
+
+PackagesReport()=
+	println($" ")
+	println($"----- < Packages Report > ------")
+	println($" ")
+	pkgs[] =
+	Features.foreach(feature) =>
+		pkgs += $(feature.PKG_NAMES)
+		export
+	pkgs = $(set $(pkgs))
+	pkgs.foreach(pkg_name) =>
+		PrintPkg($(pkg_name))
+
+FeaturesReport() =
+	println($" ")
+	println($"----- <  Feature Report > ------")
+	println($" ")
+	Features.foreach(feature) =>
+		PrintFeature($(feature))
+
+
+

@@ -1,0 +1,6 @@
+
+static. =
+	LIB = $(Feature lib, lwt findlib)
+	LIB2 = $(Feature lib2, lwt ounit)
+	PackagesReport()
+	FeaturesReport()
