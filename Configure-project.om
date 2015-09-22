@@ -14,6 +14,10 @@ private.filter(func, xs) =
 		export
 	return $(acc)
 
+
+private.bold(s) =
+	value $"$(tgetstr bold)$(s)$(tgetstr sgr0)"
+
 Pkg(pkg)=
 	.STATIC: :key: $(pkg)
 		private.COMMAND = $(OCAMLFIND) query $(pkg)
@@ -42,23 +46,24 @@ private.print_fixed_size(s, size) =
 		print($".")
 
 private.print_result(prefix, suffix) =
-	print_fixed_size($(prefix), 40)
+	print_fixed_size($(prefix), 50)
 	println($(suffix))
 
 private.PrintPkg(pkg)=
 	Pack = $(Pkg $(pkg))
 	if $(Pack.ENABLED)
-		print_result($"### Package $(pkg) ", $" [FOUND]")
+		print_result($"    Package $(bold $(pkg)) ", $" $(bold [FOUND])")
 		println($"    $(Pack.PKGPATH)")
 		println($" ")
 	else
-		print_result($"### Package $(pkg) ", $" [NOT FOUND]")
+		print_result($"    Package $(bold $(pkg)) ", $" $(bold [NOT FOUND])")
 		println($" ")
 
-private.Feature_(name, pkgs) =
+private.Feature_(name, pkgs, required) =
 	OBJ. =
 		NAME = $(name)
 		ENABLED = $(pkgs.forall $(fun pkg => $(pkg.ENABLED)))
+		REQUIRED = $(required)
 		MISSING_PKGS =
 			PKGS = $(filter $(fun pkg => $(not $(pkg.ENABLED))), $(pkgs))
 			PKGS.foreach(pkg) =>
@@ -68,29 +73,61 @@ private.Feature_(name, pkgs) =
 				value $(pkg.PKGNAME)
 	return $(OBJ)
 
-Feature(name, pkg_names) =
+Feature(name, pkg_names, required) =
 	pkg_names = $(split $" ", $(pkg_names))
 	pkgs =
 		pkg_names.foreach(pkg_name) =>
 			value $(Pkg $(pkg_name))
-	Feature = $(Feature_ $(name), $(pkgs))
+	Feature = $(Feature_ $(name), $(pkgs), $(required))
 	Features +=
 		value $(Feature)
 	export Features
 	value $(Feature)
 
-private.PrintFeature(feature) =
-	if $(feature.ENABLED)
-		print_result($"### Feature $(feature.NAME) ", $" [ENABLED]")
-		println($" ")
+private.Required(feature) =
+	EXTERNAL_REQUIRED =
+		try
+			value $(getvar $(feature.NAME)_required)
+		catch Exception(e)
+			value false
+	value $(or $(feature.REQUIRED), $(EXTERNAL_REQUIRED))
+
+
+private.RequiredStatus(feature) =
+	if $(Required $(feature))
+		value $"(REQUIRED)"
 	else
-		print_result($"### Feature $(feature.NAME) ", $" [DISABLED]")
+		value $"(OPTIONAL)"
+
+ConfigFailure = false
+
+ResultStatus(feature) =
+	export
+	if $(Required $(feature))
+		if $(feature.ENABLED)
+			value $"OK"
+		else
+			ConfigFailure = true
+			value $"FAILURE"
+			export ConfigFailure
+		export ConfigFailure
+	else
+		if $(feature.ENABLED)
+			value $"ENABLED"
+		else
+			value $"DISABLED"
+
+private.PrintFeature(feature) =
+	RESULT_STATUS = $(ResultStatus $(feature))
+	print_result($"    Feature $(bold $(feature.NAME)) $(RequiredStatus $(feature))", $" $(bold [$(RESULT_STATUS)])")
+	if $(not $(feature.ENABLED))
 		println($"    Missing packages: $(feature.MISSING_PKGS)")
-		println($" ")
+	println($" ")
+	export
 
 PackagesReport()=
 	println($" ")
-	println($"----- < Packages Report > ------")
+	println($"    $(bold [ Packages Report ])")
 	println($" ")
 	pkgs[] =
 	Features.foreach(feature) =>
@@ -101,11 +138,15 @@ PackagesReport()=
 		PrintPkg($(pkg_name))
 
 FeaturesReport() =
+	DefineCommandVars()
 	println($" ")
-	println($"----- <  Feature Report > ------")
+	println($"    $(bold [ Feature Report ])")
 	println($" ")
 	Features.foreach(feature) =>
 		PrintFeature($(feature))
+		export
+	if $(ConfigFailure)
+		exit(1)
 
 
 

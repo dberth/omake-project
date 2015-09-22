@@ -1,0 +1,9 @@
+# Copiright (C) Denis Berthod 2015
+# This file is distributed under MIT licence
+
+.PHONY: configure-file
+configure-file:
+	echo $"""#! /bin/sh
+omake --configure -s lib2_required=1
+""" > configure
+	chmod a+x configure

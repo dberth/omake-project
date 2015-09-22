@@ -1,6 +1,11 @@
 
 static. =
-	LIB = $(Feature lib, lwt findlib)
-	LIB2 = $(Feature lib2, lwt ounit)
+	LIB = $(Feature lib, lwt findlib, true)
+	LIB2 = $(Feature lib2, lwt ounit, false)
 	PackagesReport()
 	FeaturesReport()
+	export
+
+.PHONY: test
+test:
+	echo $(lib_REQUIRED)

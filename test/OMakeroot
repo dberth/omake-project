@@ -40,7 +40,7 @@ open build/LaTeX
 DefineCommandVars()
 
 include ../Configure-project
-
+include ../StandardFiles
 #
 # Include the OMakefile in this directory.
 #
