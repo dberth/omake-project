@@ -1,16 +1,38 @@
 # Copyright (C) Denis Berthod 2015
 # This file is distributed under MIT licence
 
-.PHONY: configure-file
-configure-file:
+configure:
 	echo $'''#! /bin/sh
 
-prefix=
+options=
 
 while :; do
 	case $1 in
-		--prefix=?*)
-			prefix=${1#*=}
+		--enable-?*=no)
+			tmp=${1#--enable-}
+			options=${tmp/=no}_disabled=true ${options}
+			;;
+		--disable-?*)
+			options=${1#--disable-}_disabled=true ${options}
+			;;
+		--enable-?*)
+			options=${1#--enable-}_required=true ${options}
+			;;
+		--with-?*=no)
+			tmp=${1#--with-}
+			options=with_${tmp/=no}=false ${options}
+			;;
+		--without-?*)
+			options=with_${1#--without-}=false ${options}
+			;;
+		--with-?*)
+			options=with_${1#--with-}=true ${options}
+			;;
+		--?*=?*)
+			options=${1#--} ${options}
+			;;
+		?*=?*)
+			options=${1} ${options}
 			;;
 		*)
 			break
@@ -19,6 +41,6 @@ while :; do
 	shift
 done
 
-omake --configure -s prefix=${prefix}
+omake --configure -s ${options}
 ''' > configure
 	chmod a+x configure
