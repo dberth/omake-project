@@ -59,10 +59,10 @@ private.PrintPkg(pkg)=
 		print_result($"    Package $(bold $(pkg)) ", $" $(bold [NOT FOUND])")
 		println($" ")
 
-private.Feature_(name, pkgs, required) =
+private.Feature_(name, pkgs, required, disabled) =
 	OBJ. =
 		NAME = $(name)
-		ENABLED = $(pkgs.forall $(fun pkg => $(pkg.ENABLED)))
+		ENABLED = $(and $(not $(disabled)), $(pkgs.forall $(fun pkg => $(pkg.ENABLED))))
 		REQUIRED = $(required)
 		MISSING_PKGS =
 			PKGS = $(filter $(fun pkg => $(not $(pkg.ENABLED))), $(pkgs))
@@ -73,12 +73,18 @@ private.Feature_(name, pkgs, required) =
 				value $(pkg.PKGNAME)
 	return $(OBJ)
 
+private.Disabled(feature_name) =
+	try
+		value $(getvar $(feature_name)_disabled)
+	catch Exception(e)
+		value false
+
 Feature(name, pkg_names, required) =
 	pkg_names = $(split $" ", $(pkg_names))
 	pkgs =
 		pkg_names.foreach(pkg_name) =>
 			value $(Pkg $(pkg_name))
-	Feature = $(Feature_ $(name), $(pkgs), $(required))
+	Feature = $(Feature_ $(name), $(pkgs), $(required), $(Disabled name))
 	Features +=
 		value $(Feature)
 	export Features
@@ -94,7 +100,9 @@ private.Required(feature) =
 
 
 private.RequiredStatus(feature) =
-	if $(Required $(feature))
+	if $(Disabled $(feature.NAME))
+		value $"(DISABLED)"
+	elseif $(Required $(feature))
 		value $"(REQUIRED)"
 	else
 		value $"(OPTIONAL)"

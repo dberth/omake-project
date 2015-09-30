@@ -10,7 +10,7 @@ while :; do
 	case $1 in
 		--enable-?*=no)
 			tmp=${1#--enable-}
-			options=${tmp/=no}_disabled=true ${options}
+			options=${tmp%=no}_disabled=true ${options}
 			;;
 		--disable-?*)
 			options=${1#--disable-}_disabled=true ${options}
@@ -20,7 +20,7 @@ while :; do
 			;;
 		--with-?*=no)
 			tmp=${1#--with-}
-			options=with_${tmp/=no}=false ${options}
+			options=with_${tmp%=no}=false ${options}
 			;;
 		--without-?*)
 			options=with_${1#--without-}=false ${options}
