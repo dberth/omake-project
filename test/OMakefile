@@ -2,10 +2,11 @@
 static. =
 	LIB = $(Feature lib, lwt findlib, true)
 	LIB2 = $(Feature lib2, lwt ounit, false)
+	ENV = $(EnvVarsReport)
 	PackagesReport()
 	FeaturesReport()
 	export
 
 .PHONY: test
 test:
-	echo $(lib_REQUIRED)
+	echo $(ENV.PREFIX)

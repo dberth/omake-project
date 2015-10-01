@@ -125,10 +125,14 @@ private.PrintFeature(feature) =
 	println($" ")
 	export
 
+private.PrintReportTitle(title) =
+	println($" ")
+	println($"    $(bold [ $(title) Report ])")
+	println($" ")
+
+
 PackagesReport()=
-	println($" ")
-	println($"    $(bold [ Packages Report ])")
-	println($" ")
+	PrintReportTitle($"Package")
 	pkgs[] =
 	Features.foreach(feature) =>
 		pkgs += $(feature.PKG_NAMES)
@@ -139,14 +143,25 @@ PackagesReport()=
 
 FeaturesReport() =
 	DefineCommandVars()
-	println($" ")
-	println($"    $(bold [ Feature Report ])")
-	println($" ")
+	PrintReportTitle($"Feature")
 	Features.foreach(feature) =>
 		PrintFeature($(feature))
 		export
 	if $(ConfigFailure)
 		exit(1)
 
+EnvVarReport(var_name) =
+	VAR =
+		try
+			value $(getvar $(var_name))
+		catch Exception(e)
+			value ""
+	println($"    $(var_name)=$(VAR)")
+	value $(VAR)
 
-
+EnvVarsReport()=
+	DefineCommandVars()
+	PrintReportTitle($"Env. Variable")
+	ENV. =
+		PREFIX = $(EnvVarReport $"prefix")
+	value $(ENV)
