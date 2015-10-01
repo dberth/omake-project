@@ -20,13 +20,13 @@ while :; do
 			;;
 		--with-?*=no)
 			tmp=${1#--with-}
-			options=with_${tmp%=no}=false ${options}
+			options=${tmp%=no}_disabled=true ${options}
 			;;
 		--without-?*)
-			options=with_${1#--without-}=false ${options}
+			options=${1#--without-}_disabled=true ${options}
 			;;
 		--with-?*)
-			options=with_${1#--with-}=true ${options}
+			options=${1#--with-}_required=true ${options}
 			;;
 		--?*=?*)
 			options=${1#--} ${options}

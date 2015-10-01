@@ -18,10 +18,23 @@ private.filter(func, xs) =
 private.bold(s) =
 	value $"$(tgetstr bold)$(s)$(tgetstr sgr0)"
 
+private.Flag(name, suffix) =
+	try
+		value $(getvar $(name)$(suffix))
+	catch Exception(e)
+		value false
+
+private.Required(name) =
+	value $(Flag $(name), $"_required")
+
+private.Disabled(name) =
+	value $(Flag $(name), $"_disabled")
+
+
 Pkg(pkg)=
 	.STATIC: :key: $(pkg)
 		private.COMMAND = $(OCAMLFIND) query $(pkg)
-		ENABLED = $(shell-success-null $(COMMAND))
+		ENABLED = $(and $(not $(Disabled $(pkg))), $(shell-success-null $(COMMAND)))
 		export PKGPATH
 		if $(ENABLED)
 			PKGPATH = $(shell $(OCAMLFIND) query $(pkg))
@@ -49,15 +62,40 @@ private.print_result(prefix, suffix) =
 	print_fixed_size($(prefix), 50)
 	println($(suffix))
 
+private.PkgRequiredStatus(pkg)=
+	if $(Required $(pkg))
+		value $" (REQUIRED)"
+	elseif $(Disabled $(pkg))
+		value $" (DISABLED)"
+	else
+		value $" "
+
+ConfigFailure = false
+
+PkgResultStatus(pkg) =
+	export
+	if $(Required $(pkg.PKGNAME))
+		if $(pkg.ENABLED)
+			value $"FOUND"
+		else
+			ConfigFailure = true
+			value $"FAILURE"
+			export ConfigFailure
+		export ConfigFailure
+	else
+		if $(pkg.ENABLED)
+			value $"FOUND"
+		else
+			value $"NOT FOUND"
+
 private.PrintPkg(pkg)=
 	Pack = $(Pkg $(pkg))
-	if $(Pack.ENABLED)
-		print_result($"    Package $(bold $(pkg)) ", $" $(bold [FOUND])")
+	RESULT_STATUS = $(PkgResultStatus $(Pack))
+	print_result($"    Package $(bold $(pkg))$(PkgRequiredStatus $(pkg))", $" $(bold [$(RESULT_STATUS)])")
+	if $(Pack.PKGPATH)
 		println($"    $(Pack.PKGPATH)")
-		println($" ")
-	else
-		print_result($"    Package $(bold $(pkg)) ", $" $(bold [NOT FOUND])")
-		println($" ")
+	println($" ")
+	export
 
 private.Feature_(name, pkgs, required, disabled) =
 	OBJ. =
@@ -73,12 +111,6 @@ private.Feature_(name, pkgs, required, disabled) =
 				value $(pkg.PKGNAME)
 	return $(OBJ)
 
-private.Disabled(feature_name) =
-	try
-		value $(getvar $(feature_name)_disabled)
-	catch Exception(e)
-		value false
-
 Feature(name, pkg_names, required) =
 	pkg_names = $(split $" ", $(pkg_names))
 	pkgs =
@@ -90,28 +122,22 @@ Feature(name, pkg_names, required) =
 	export Features
 	value $(Feature)
 
-private.Required(feature) =
-	EXTERNAL_REQUIRED =
-		try
-			value $(getvar $(feature.NAME)_required)
-		catch Exception(e)
-			value false
+private.RequiredFeature(feature) =
+	EXTERNAL_REQUIRED = $(Required $(feature.NAME))
 	value $(or $(feature.REQUIRED), $(EXTERNAL_REQUIRED))
 
 
 private.RequiredStatus(feature) =
-	if $(Disabled $(feature.NAME))
-		value $"(DISABLED)"
-	elseif $(Required $(feature))
+	if $(RequiredFeature $(feature))
 		value $"(REQUIRED)"
+	elseif $(Disabled $(feature.NAME))
+		value $"(DISABLED)"
 	else
 		value $"(OPTIONAL)"
 
-ConfigFailure = false
-
 ResultStatus(feature) =
 	export
-	if $(Required $(feature))
+	if $(RequiredFeature $(feature))
 		if $(feature.ENABLED)
 			value $"OK"
 		else
@@ -148,6 +174,9 @@ PackagesReport()=
 	pkgs = $(set $(pkgs))
 	pkgs.foreach(pkg_name) =>
 		PrintPkg($(pkg_name))
+		export
+	if $(ConfigFailure)
+		exit(1)
 
 FeaturesReport() =
 	DefineCommandVars()
