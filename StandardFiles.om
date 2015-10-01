@@ -10,29 +10,29 @@ while :; do
 	case $1 in
 		--enable-?*=no)
 			tmp=${1#--enable-}
-			options=${tmp%=no}_disabled=true ${options}
+			options=feature_${tmp%=no}_disabled=true ${options}
 			;;
 		--disable-?*)
-			options=${1#--disable-}_disabled=true ${options}
+			options=feature_${1#--disable-}_disabled=true ${options}
 			;;
 		--enable-?*)
-			options=${1#--enable-}_required=true ${options}
+			options=feature_${1#--enable-}_required=true ${options}
 			;;
 		--with-?*=no)
 			tmp=${1#--with-}
-			options=${tmp%=no}_disabled=true ${options}
+			options=pkg_${tmp%=no}_disabled=true ${options}
 			;;
 		--without-?*)
-			options=${1#--without-}_disabled=true ${options}
+			options=pkg_${1#--without-}_disabled=true ${options}
 			;;
 		--with-?*)
-			options=${1#--with-}_required=true ${options}
+			options=pkg_${1#--with-}_required=true ${options}
 			;;
 		--?*=?*)
-			options=${1#--} ${options}
+			options=var_${1#--} ${options}
 			;;
 		?*=?*)
-			options=${1} ${options}
+			options=var_${1} ${options}
 			;;
 		*)
 			break
